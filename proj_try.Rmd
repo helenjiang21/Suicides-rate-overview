@@ -1,0 +1,260 @@
+---
+title: "Proj_try"
+output: 
+  html_document:
+    keep_md: TRUE
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, cache = T)
+library(tidyverse)
+library(readr)
+library(ggridges)
+library(dplyr)
+library(ggmap)
+library(viridis)
+library(gganimate)
+library(countrycode)
+library(ggpubr)
+```
+
+## Import
+
+```{r}
+data <- read.csv("suicide.csv")
+```
+
+```{r, include=FALSE}
+data$age <- factor(data$age, levels = c("5-14 years", "15-24 years", "25-34 years", "35-54 years", "55-74 years", "75+ years"))
+data$generation <- factor(data$generation, levels = c("G.I. Generation", "Silent", "Boomers", "Generation X", "Millenials", "Generation Z"))
+```
+
+```{r}
+glimpse(data)
+```
+
+## Overview
+
+###Total
+
+Number of suicides per 100,000 people all over the world from 1985 to 2016.
+
+```{r}
+total <- data %>%
+  select("X...country":"suicides.100k.pop", "HDI.for.year":"generation") %>%
+  group_by(year) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population)) * 100000)
+mean <- round(mean(total$suicides_per_100k), 2)
+mean
+```
+
+```{r}
+ggplot(total) +
+  geom_point(aes(year, suicides_per_100k)) +
+  geom_smooth(aes(year, suicides_per_100k), se = T, span = .3)+
+  ylim(5, 17) +
+  geom_hline(yintercept = 13.08)
+```
+
+###Sex
+
+Number of suicides per 100k for males and females.
+
+```{r}
+sex <- data %>%
+  select("year":"suicides.100k.pop", "HDI.for.year":"generation") %>%
+  group_by(year, sex) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population)) * 100000)
+sex
+```
+
+```{r}
+ggplot() +
+  geom_point(data = sex, aes(year, suicides_per_100k, color = sex)) +
+  geom_smooth(data = sex, aes(year, suicides_per_100k, color = sex), span = 0.3)+
+  geom_smooth(data = total, aes(year, suicides_per_100k), span = 0.2)
+```
+
+```{r}
+sex_country <- data %>%
+  select("X...country":"suicides.100k.pop", "HDI.for.year":"generation") %>%
+  group_by(X...country, sex) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population)) * 100000)
+sex_bar <- ggplot(sex_country) +
+  geom_col(aes(reorder(X...country, suicides_per_100k), suicides_per_100k, fill = sex), identity = "dodge") +
+  coord_flip()
+```
+
+###Age
+
+Number of suicides per 100k for each age group.
+
+```{r}
+age <- data %>%
+  select("year":"suicides.100k.pop", "HDI.for.year":"generation") %>%
+  group_by(year, age) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population))*100000)
+age
+```
+
+```{r}
+ggplot() +
+   geom_point(data = age, aes(year, suicides_per_100k, color = age)) +
+  geom_smooth(data = age, aes(year, suicides_per_100k, span = .2, color = age)) +
+  geom_smooth(data = total, aes(year, suicides_per_100k), span = .2, color = "black")
+```
+
+###Generation
+
+Number of suicides per 100k for each generation.
+
+```{r}
+gen <- data %>%
+  select("year":"suicides.100k.pop", "HDI.for.year":"generation") %>%
+  group_by(year, generation) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population))*100000)
+gen
+```
+
+```{r}
+ggplot() +
+  geom_smooth(data = gen, aes(year, suicides_per_100k, color = generation), span =.5) +
+  geom_smooth(data = total, aes(year, suicides_per_100k), span = .3, color = "black")
+```
+
+###Women more than men?
+
+```{r}
+country_sex <- data %>%
+  group_by(X...country, year, sex) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population))*100000) %>%
+  ungroup() %>%
+  group_by(X...country, sex) %>%
+  summarize(suicides_per_100k = sum(suicides_per_100k)/n()) %>%
+  rename(country = X...country)
+country_sex <- spread(country_sex, sex, suicides_per_100k)
+filter(country_sex, male > female)
+filter(country_sex, male <= female)
+```
+
+##Country most
+
+```{r}
+country_total_pop <- data %>%
+  group_by(X...country, year) %>%
+  summarize(population = sum(population)) %>%
+  ungroup() %>%
+  group_by(X...country) %>%
+  summarise(average_population_1m = (sum(population)/n())/1e6) %>%
+  rename(country = X...country)
+
+country <- data %>%
+  group_by(X...country, year) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population))*100000) %>%
+  ungroup() %>%
+  group_by(X...country) %>%
+  summarize(average_suicides_per_100k = sum(suicides_per_100k)/n()) %>%
+  rename(country = X...country)
+
+Country <- left_join(country, country_total_pop, by = "country")
+```
+
+```{r}
+Country <- arrange(Country, desc(average_suicides_per_100k))
+Country
+```
+
+```{r}
+ggplot(Country) +
+  geom_col(aes(reorder(country, average_suicides_per_100k), average_suicides_per_100k, color = average_suicides_per_100k)) +
+  scale_fill_viridis_c()
+```
+
+```{r}
+map_world <- map_data("world")
+country_map <- Country 
+country_map$country <- recode(country_map$country, 'United States' = 'USA','United Kingdom' = 'UK', "Russian Federation" = "Russia", "Republic of Korea" = "South Korea", "United Arab Emirates"= "UAE")
+world_map <- left_join(map_world, country_map, by = c('region' = 'country'))
+```
+```{r}
+ggplot(world_map) +
+  geom_polygon(aes(long, lat, group = group, fill = average_suicides_per_100k)) +
+  labs(fill = "s") +
+  scale_fill_viridis_c() +
+  coord_quickmap()
+```
+
+
+##GDP vs. suicides
+
+```{r}
+country_year <- data %>%
+  group_by(country.year) %>%
+  summarize(suicides_per_100k = (sum(suicides_no)/sum(population))*100000) %>%
+  ungroup()
+eco <- data %>%
+  select(X...country, year, country.year:gdp_per_capita....) %>%
+  unique() %>%
+  rename(country = X...country, gdp_per_capita = gdp_per_capita....)
+```
+
+```{r}
+country_eco <- inner_join(country_year, eco)
+country_eco$continent <- countrycode(country_eco$country, "country.name", "continent")
+```
+
+```{r}
+country_pop <- select(data, country.year, population) %>%
+  group_by(country.year) %>%
+  summarize(population = sum(population))
+country_eco <- left_join(country_eco, country_pop)
+```
+
+###line, by continent, GDP vs. suicides
+
+```{r}
+continent_eco_gdp <- country_eco %>%
+  group_by(year, country) %>%
+  na.omit(gdp_per_capita) %>%
+  summarise(pop = mean(population), suicides_per_100k = mean(suicides_per_100k), gdp_per_capita = mean(gdp_per_capita)) %>%
+  ungroup() 
+continent_eco_gdp$continent <- countrycode(continent_eco_gdp$country, "country.name", "continent")
+country_eco_gdp <- continent_eco_gdp %>%
+  group_by(country) %>%
+  summarise(suicides_per_100k = mean(suicides_per_100k), gdp_per_capita = mean(gdp_per_capita))
+country_eco_gdp$continent <- countrycode(country_eco_gdp$country, "country.name", "continent")
+country_eco_gdp
+```
+
+```{r}
+country_gdp <- select(country_eco_gdp, gdp_per_capita, suicides_per_100k)
+
+ggplot(country_eco_gdp, aes(gdp_per_capita, suicides_per_100k)) +
+  geom_point(aes(color = continent), show.legend = T) +
+  geom_smooth(method = "lm", formula = y~x)
+summary(lm(country_eco_gdp$gdp_per_capita~country_eco_gdp$suicides_per_100k))
+```
+
+
+##HDI
+
+```{r}
+continent_eco_hdi <- country_eco %>%
+  group_by(year, country) %>%
+  na.omit(HDI.for.year) %>%
+  summarise(pop = mean(population), suicides_per_100k = mean(suicides_per_100k), HDI = mean(HDI.for.year)) %>%
+  ungroup() 
+country_eco_hdi <- continent_eco_hdi %>%
+  group_by(country) %>%
+  summarise(suicides_per_100k = mean(suicides_per_100k), HDI= mean(HDI))
+country_eco_hdi$continent <- countrycode(country_eco_hdi$country, "country.name", "continent")
+country_eco_hdi
+```
+
+```{r}
+ggplot(country_eco_hdi) +
+  geom_point(aes(HDI, suicides_per_100k, color = continent)) 
+summary(lm(country_eco_hdi$HDI~country_eco_hdi$suicides_per_100k))
+```
