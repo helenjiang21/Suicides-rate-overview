@@ -1,5 +1,6 @@
 # Suicides Rates Overview
-This is a class project for PRISMS Data Science class, 2019-2020. This project reviewed the global suicides rate from 1985 to 2016. Specifically, I studied the global change of suicides rates, compared the rates between different countries, genders, age groups, and generation. I also looked into the connection between suicides rates and economic or social indices. 
+This is a class project for PRISMS Data Science class, 2019-2020. This project reviewed the global suicides rate from 1985 to 2016. 
+Specifically, I studied the global change of suicides rates, compared the rates between different countries, genders, age groups, and generation. I also looked into the connection between suicides rates and economic or social indices. 
 
 In conclusion, male and the elder have a higher risk of committing suicides, while GDP and HDI have no significant correlation with suicides rate.
 
