@@ -1,5 +1,5 @@
 # Suicides Rates Overview
-This is a class project for PRISMS Data Science class, 2019-2020. This project reviewed the global suicides rate from 1985 to 2016. 
+This is a class project made by Helen Jiang for PRISMS Data Science class, 2019-2020. This project reviewed the global suicides rate from 1985 to 2016. 
 
 Specifically, I studied the global change of suicides rates, compared the rates between different countries, genders, age groups, and generation. I also looked into the connection between suicides rates and economic or social indices. 
 
