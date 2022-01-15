@@ -5,6 +5,8 @@ Specifically, I studied the global change of suicides rates, compared the rates 
 
 In conclusion, male and the elder have a higher risk of committing suicides, while GDP and HDI have no significant correlation with suicides rate.
 
+DS proj-suicides-480p.m4v is a video that records the performance of the app.
+
 
 The dataset used for this project can be found at: https://www.kaggle.com/russellyates88/suicide-rates-overview-1985-to-2016, which contains data from:
 
